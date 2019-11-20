@@ -5,13 +5,14 @@
 	prompt_novo_elemento: .asciiz "\nInforme o novo elemento: "
 	prompt_recupera_indice: .asciiz "\nInforme o indice do elemento a ser recuperado: "
 	prompt_del_indice: .asciiz "\nInforme o indice do elemento a ser deletado: "	
-	prompt_recupera_lista: .asciiz "\nA lista informada é: "
+	prompt_recupera_lista: .asciiz "\nA lista informada é:\n"
 	prompt_sair: .asciiz "\nEncerrando aplicação..."
-	prompt_lista_vazia: .asciiz "\nA lista não contém elementos."
+	prompt_lista_vazia: .asciiz "\nA lista não contém elementos.\n"
 	msg_erro_tamanho_lista_impossivel: .asciiz "\n[ERRO] Tamanho da lista inválido."
 	msg_erro_menu_invalido: .asciiz "\n[ERRO] Opção inválida."
 	msg_erro_tamanho_lista_maximo: .asciiz "\n[ERRO] Tamanho maximo da lista atingido."
 	msg_erro_indice: .asciiz  "\n[ERRO] Índice acimo do limite."
+	pula_linha: .asciiz "\n"
   
 .text
 main:
@@ -52,18 +53,36 @@ inicio_menu:
 	li $v0, 5
 	syscall
 	
+	move $a1, $v0
+	
 	blez $v0, erro_menu_invalido
 	bgt $v0, $s5, erro_menu_invalido
+
+testa_menu1:	
+	seq  $t2, $a1, $s1  #1 - Adicionar elemento	
+	beqz $t2, testa_menu2
+	jal func_adicionar_elemento
+
+testa_menu2:	
+	seq $t2, $a1, $s2 #2 - Recuperar elemento
+	beqz $t2, testa_menu3
+	jal func_recuperar_elemento
+
+testa_menu3:	
+	seq $t2, $a1, $s3 #3 - Imprimir lista
+	beqz $t2, testa_menu4
+	jal func_imprimir_lista
 	
-	beq $v0, $s1, func_adicionar_elemento #1 - Adicionar elemento
-	j inicio_menu
-	beq $v0, $s2, func_recuperar_elemento #2 - Recuperar elemento
-	j inicio_menu
-	beq $v0, $s3, func_imprimir_lista #3 - Imprimir lista
-	j inicio_menu
-	beq $v0, $s4, func_deletar_elemento #4 - Deletar elemento
-	j inicio_menu
-	beq $v0, $s5, func_sair #5 - Sair
+testa_menu4:
+	seq $t2, $a1, $s4 #4 - Deletar elemento
+	beqz $t2, testa_menu5
+	jal func_deletar_elemento
+
+testa_menu5:
+	seq $t2, $a1, $s5 #5 - Sair
+	beqz $t2, inicio_menu
+	jal func_sair
+	
 	j inicio_menu
 
 
@@ -104,8 +123,8 @@ erro_tamanho_lista_maximo:
 ## FUNÇÃO ADICIONAR ELEMENTO ##
 func_adicionar_elemento:
 #Checa se é possível adicionar novo elemento na lista
-	sle $t5, $t1, $t0 #Se Tamanho atual da lista é menor que o tamanho maximo  $t5 recebe 1
-	blez $t5, erro_tamanho_lista_maximo  #Se $t5 <= 0 pula para 'erro_tam_lista_maximo' 
+	sge $t5, $t1, $t0 #Se Tamanho atual da lista é maior ou igual que o tamanho maximo  $t5 recebe 1
+	beq $t5, 1, erro_tamanho_lista_maximo  #Se $t5 == 1 pula para 'erro_tam_lista_maximo' 
 	
 #Leitura do novo elemento da lista
 	la $a0, prompt_novo_elemento
@@ -120,8 +139,8 @@ func_adicionar_elemento:
 	sw $v0, 0($sp)
 	
 #Incrementa o tamanho da lista
-	addi $t0, $t0,1
-	
+	addi $t1, $t1, 1
+	jr $ra 
 	
 	
 	
@@ -136,6 +155,49 @@ func_recuperar_elemento:
 
 ## FUNÇÃO IMPRIMIR LISTA ##
 func_imprimir_lista:
+#Checa se existe elemento na lista
+	move $t3, $t1 #$t3 recebe uma copia do tamanho atual da lista
+	beqz $t3, imprime_lista_vazia #Se a lista estiver vazia, pula para 'imprime_lista_vazia'
+	add $t3, $t3, -1
+
+#Impressão  dos elementos da lista
+	la $a0, prompt_recupera_lista
+	li $v0, 4
+	syscall
+		
+for_lista:	
+	ble $t3, -1, fim_func_imprimir_lista #Se $t3 <= -1 pula para 'fim_func_imprimir_lista' 
+
+	li $t7, 4
+	
+	mul $t7, $t7, $t3 #obetem o indice da stack
+	
+	
+	#Recupera o valor da stack
+	add $sp, $sp, $t7
+	lw $a0, 0($sp)
+	li $v0, 1
+	syscall
+	
+	la $a0, pula_linha
+	li $v0, 4
+	syscall
+	
+	sub $sp, $sp, $t7
+	
+#Incrementa o tamanho da lista
+	addi $t3, $t3, -1
+	j for_lista
+#Se a lista estiver vazia, imprime essa informação
+imprime_lista_vazia:
+	la $a0, prompt_lista_vazia
+	li $v0, 4
+	syscall
+fim_func_imprimir_lista:
+	jr $ra
+
+
+
 
 
 ## FUNÇÃO DELETAR ELEMENTO ##
