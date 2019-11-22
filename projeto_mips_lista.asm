@@ -3,16 +3,17 @@
 	prompt_menu: .asciiz "\nMENU DE OPÇÕES:\n1 - Adicionar elemento\n2 - Recuperar elemento\n3 - Imprimir lista\n4 - Deletar elemento\n5 - Sair"
 	prompt_acao: .asciiz "\nESCOLHA UMA ÁÇÃO: "
 	prompt_novo_elemento: .asciiz "\nInforme o novo elemento: "
-	prompt_recupera_indice: .asciiz "\nInforme o indice do elemento a ser recuperado: "
-	prompt_del_indice: .asciiz "\nInforme o indice do elemento a ser deletado: "	
+	prompt_indice: .asciiz "\nInforme o indice do elemento:"
+	prompt_elemento_recuperado: .asciiz "\nValor recuperado: "
 	prompt_recupera_lista: .asciiz "\nA lista informada é:\n"
 	prompt_sair: .asciiz "\nEncerrando aplicação..."
 	prompt_lista_vazia: .asciiz "\nA lista não contém elementos.\n"
 	msg_erro_tamanho_lista_impossivel: .asciiz "\n[ERRO] Tamanho da lista inválido."
 	msg_erro_menu_invalido: .asciiz "\n[ERRO] Opção inválida."
-	msg_erro_tamanho_lista_maximo: .asciiz "\n[ERRO] Tamanho maximo da lista atingido."
-	msg_erro_indice: .asciiz  "\n[ERRO] Índice acimo do limite."
+	msg_erro_tamanho_lista_maximo: .asciiz "\n[ERRO] Tamanho máximo da lista atingido. Ignorando ação..."
+	msg_erro_indice_invalido: .asciiz  "\n[ERRO] Índice informado é invalido."
 	pula_linha: .asciiz "\n"
+	separa_itens: .asciiz " "
   
 .text
 main:
@@ -39,7 +40,7 @@ main:
 	move $t0, $v0 #tamanho maximo da lista em $t0		
 
 
-			
+	
 inicio_menu:
 #Imprime o menu
 	la $a0, prompt_menu
@@ -91,10 +92,11 @@ testa_menu5:
 
 
 
-#############
-##  ERROS  ##
-#############
-
+	#############
+	##  ERROS  ##
+	#############
+	
+#################################
 #Erro - Tamanho da lista inválido
 erro_tamanho_lista_impossivel:
 	la $a0, msg_erro_tamanho_lista_impossivel
@@ -102,13 +104,15 @@ erro_tamanho_lista_impossivel:
 	syscall
 	j main
 
-#Erro - Tamanho da lista inválido
+#################################
+#Erro - Menu inválido
 erro_menu_invalido:
 	la $a0, msg_erro_menu_invalido
 	li $v0, 4
 	syscall
 	j inicio_menu
 
+#################################
 #Erro - Tamanho da lista inválido
 erro_tamanho_lista_maximo:
 	la $a0, msg_erro_tamanho_lista_maximo
@@ -116,10 +120,24 @@ erro_tamanho_lista_maximo:
 	syscall
 	j inicio_menu
 
-###############
-##  FUNÇÕES  ##
-###############
+#################################
+#Erro - Índice inválido
+erro_indice_invalido:
+	la $a0, msg_erro_indice_invalido
+	li $v0, 4
+	syscall
+	j inicio_menu
 
+
+
+
+
+
+	###############
+	##  FUNÇÕES  ##
+	###############
+
+###############################
 ## FUNÇÃO ADICIONAR ELEMENTO ##
 func_adicionar_elemento:
 #Checa se é possível adicionar novo elemento na lista
@@ -141,18 +159,118 @@ func_adicionar_elemento:
 #Incrementa o tamanho da lista
 	addi $t1, $t1, 1
 	jr $ra 
-	
-	
-	
-	
-	
-	
-	
-
+		
+###############################
 ## FUNÇÃO RECUPERAR ELEMENTO ##
 func_recuperar_elemento:
+#Checa se existe elemento na lista
+	beqz $t1, imprime_lista_vazia_elemento #Se a lista estiver vazia, pula para 'imprime_lista_vazia'
+	
+	#Pergunta o indice do elemento a ser exibido
+	la $a0, prompt_indice
+	li $v0, 4
+	syscall
+
+	li $v0, 5
+	syscall
+
+	#Verifica se o elemento de indice informado é possivel de ser recuperado
+	ble $v0, -1 erro_indice_invalido
+	bge $v0, $t1, erro_indice_invalido
+
+	#Obtém o índice do elemento da stack a ser impresso
+	add $t3, $t1, -1 #$t3 recebe o indice maximo possivel (numero de elementos menos uma unidade)
+	sub $t3, $t3, $v0 #Manipula o valor de $t3 para percorrer a stack no caminho inverso
+	li $t7, 4 #valor auxiliar para obtencao do indice da stack
+	mul $t7, $t7, $t3
+	
+	la $a0, prompt_elemento_recuperado
+	li $v0, 4
+	syscall
+	
+	#Recupera o valor da stack
+	add $sp, $sp, $t7
+	lw $a0, 0($sp)
+	li $v0, 1
+	syscall
+	
+	sub $sp, $sp, $t7 #retorna a stack para a posicao original
+	j fim_func_recuperar_elemento
+	
+#Se a lista estiver vazia, imprime essa informação
+imprime_lista_vazia_elemento:
+	la $a0, prompt_lista_vazia
+	li $v0, 4
+	syscall
+fim_func_recuperar_elemento:
+	la $a0, pula_linha
+	li $v0, 4
+	syscall
+	jr $ra
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###########################
 ## FUNÇÃO IMPRIMIR LISTA ##
 func_imprimir_lista:
 #Checa se existe elemento na lista
@@ -168,10 +286,9 @@ func_imprimir_lista:
 for_lista:	
 	ble $t3, -1, fim_func_imprimir_lista #Se $t3 <= -1 pula para 'fim_func_imprimir_lista' 
 
-	li $t7, 4
+	li $t7, 4 #valor auxiliar para obtencao do indice da stack
 	
-	mul $t7, $t7, $t3 #obetem o indice da stack
-	
+	mul $t7, $t7, $t3 #obetem o indice do elemento da stack a ser impresso
 	
 	#Recupera o valor da stack
 	add $sp, $sp, $t7
@@ -179,11 +296,11 @@ for_lista:
 	li $v0, 1
 	syscall
 	
-	la $a0, pula_linha
+	la $a0, separa_itens
 	li $v0, 4
 	syscall
 	
-	sub $sp, $sp, $t7
+	sub $sp, $sp, $t7 #retorna a stack a posicao original
 	
 #Incrementa o tamanho da lista
 	addi $t3, $t3, -1
@@ -194,19 +311,21 @@ imprime_lista_vazia:
 	li $v0, 4
 	syscall
 fim_func_imprimir_lista:
+	la $a0, pula_linha
+	li $v0, 4
+	syscall
 	jr $ra
 
 
-
-
-
+#############################
 ## FUNÇÃO DELETAR ELEMENTO ##
 func_deletar_elemento:
 
 
 
 
-
+###################
+## 'FUNÇÃO' SAIR ##
 func_sair:
 	la $a0, prompt_sair
 	li $v0, 4
