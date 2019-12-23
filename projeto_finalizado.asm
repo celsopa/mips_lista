@@ -2,11 +2,7 @@
 # Disciplina: Arquitetura e Organização de Computadores
 # Atividade avaliativa
 # Programa em Assembly MIPS para armazenamento de uma lista arbitraria de numeros inteiros.
-
-
-#########################################################
-# OBSERVAÇÃO:  Os índices da lista começam com 0 (zero) #
-#########################################################
+# Aluno: Celso Pereira de Araújo
 
 ####################################################################################################################
 
